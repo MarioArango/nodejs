@@ -1,0 +1,95 @@
+NODEJS ES 
+    CONCURRENTE: monohilo (pero para operaciones de computo intensivo se puede usar "worker_threads" para varios hilos)
+    BASADO EN EVENTOS: event loop, sockets (EventEmitter)
+    ASINCRONO: no bloqueante delegando tareas http al SO u otras al Thread Pool y otras a su mismo hilo, esperando la respuesta en el stack queu (callbacks) y micro stack queu (mayor prioridad, promesas)
+    BASADO EN V8: parsea (convierte js puro AST para tener un orden) y compila a bytecode con V8, este proceso se cachea la primera vez que se solicita,
+                  tambien maneja todo el estado de la aplicacion en RAM incluidos el callstack (cola de tareas en codigo binario), memory stack, memory heap y garbage collector,
+                  actualizando todo esto segun las respuestas del event loop.
+    
+SOPORTE DE NODEJS - RELEASES
+    Las versiones impares tienen soporte 6 meses, Node.js 21.x.y (permiten innovar)
+    Las versiones pares 30 meses, Node.js 22.x.y  (dan estabilidad)
+    Sistema de versionado semántico:
+        [Major].[Minor].[Patch]
+            ↑      ↑      ↑
+            │      │      └─ Correcciones de errores
+            │      └─ Nuevas características compatibles
+            └─ Número principal (el que determina par/impar)
+
+PROCESO DE COMPILACION: 
+    Al compilar se lleva a codigo maquina V8 y libuv.
+    Usa webpack (para analizar y construir las dependencias) y babel (para entender el codigo JS moderno, creando su propio AST), con el resultado V8 parsea (crea su propio AST) y compila a demanda (BYTECODE).
+                 
+USO DE HILOS
+    Si mi servidor tiene 8 nucleos y cada nucleo 1 hilo
+    Mi aplicacion nodejs usa 1 hilo principal y libuv por defecto usa 4 hilos (fs async, crypto, zlib, dns), entonces estare usando 5/8 hilos, los 3 seran para procesos externos de mi aplicacion.
+    Los hilos de libuv son configurables via variables de entorno (UV_THREADPOOL_SIZE)
+
+MANEJO DE MULTIPLES INSTANCIAS DE MI APLICACION EN EL MISMO SERVIDOR
+    Escalamiento horizontal: es crear más servidores y poner mi aplicacion en cada una
+    Escalamiento vertical: es darle más capacidad de hardward a cada servidor donde esta mi aplicación.
+
+    Se puede usar PM2 para crear más instancias de mi aplicación en el mismo servidor y tener un buen balanceo de cargas, pero se debe tener en cuenta:
+        El escalamiento vertica (RAM e hilos), ya que cada instancia consumira recursos de computo.
+        Tener cache compartido a nivel de RAM como Redis, para manejar de mejor forma las conexiones socket de todos los clientes.
+    
+    A nivel de latencia por distancia de peticion se debe tener en cuenta el escalamiento horizontal, ubicando el servidor segun el cliente demandante.
+
+MANEJO DE MULTIPLES INSTANCIAS DE MI APLICACION EN VARIOS SERVIDORES
+    Para esto se puede usar ngnix, este ayuda a enviar las solicitudes del cliente al servidor fisico con menos carga, creando menos latencia
+
+FLUJO DE BALANCEO DE CARGA DENTRO Y FUERA DEL SERVIDOR
+    - Si tengo 3 servidores fisicos, uno en la ciudad A, B y C, y cada servidor fisico tiene 3 instancias, entonces ante la peticion de un cliente, 
+    ngnix ve a que servidor fisico enviar segun su carga, y una vez esta en el servidor, pm2 ve a que instancia enviar segun tambien su carga, 
+    de este modo se complementan.
+    - NGNIX (proxy) trabaja en balanceo de carga a nivel geografico, fisico, referenciandose según el escalamiento horizontal.
+    - PM2 trabaja en balanceo de carga a nivel de hardware, en el mismo servidor, referenciandose del escalamiento vertical.
+    - Si se tiene varios servidores fisicos, se debe tener un servidor para Redis, porque permite:
+        Consistencia de datos entre servidores (sockets_id)
+        Alta disponibilidad
+        Recuperación ante fallos
+        Escalabilidad horizontal
+        Baja latencia en acceso a datos
+        Redis se convierte en una "fuente única de verdad" para datos que necesitan ser compartidos entre todas las instancias de todos los servidores.
+
+ARQUITECTURA DISTRIBUIDA
+    Los componentes del sistema están distribuidos en diferentes ubicaciones físicas O geograficas.
+    Cada componente (instancia en cada punto geografico) tiene un rol específico.
+    Se comunican entre sí para funcionar como un sistema completo.
+    Esta orientada a microservicios.
+    Esta arquitectura es común en aplicaciones empresariales y sistemas que requieren alta disponibilidad y escalabilidad.
+
+    Ejemplo:
+        1. Servidores de Aplicación (Distribuidos geográficamente)
+            - Servidor A (Ciudad A)
+            - Servidor B (Ciudad B)
+            - Servidor C (Ciudad C)
+
+        2. Componentes de Infraestructura
+            - NGINX (Balanceador de carga global)
+            - PM2 (Gestor de instancias local)
+            - Redis (Servidor de datos centralizado)
+
+        3. Instancias de Aplicación
+            - Múltiples instancias por servidor
+            - Gestionadas por PM2
+
+    Características de tu arquitectura distribuida:
+        1. Alta Disponibilidad
+            - Múltiples servidores
+            - Múltiples instancias
+            - Recuperación ante fallos
+
+        2. Escalabilidad
+            - Horizontal (más servidores)
+            - Vertical (más recursos)
+            - Por componentes (escalar individualmente)
+
+        3. Consistencia de Datos
+            - Redis como fuente única de verdad
+            - Datos compartidos entre instancias
+            - Estado distribuido
+
+        4. Balanceo de Carga Multinivel
+            - Geográfico (NGINX)
+            - Local (PM2)
