@@ -1,0 +1,31 @@
+COMMON JS
+    En el package.json, el atributo type por defecto -> "type": "commonjs"
+    Los archivos son .js
+    Diferencias
+        1. Usa require y module.exports.
+        2. Carga los modulos de forma síncrona (Resolución de importaciones estaticas)
+                Al hacer build o guardar cambios en desarrollo, primero se resuelven las dependencias y si todo sale bien el servidor esta listo para escuchar solicitudes en su puerto.
+                Al ser sincrona se resuelven en el hilo principal, pudiendo demorar más la compilación y cambios en desarrollo.
+                Puede hacer importaciones dinamicos directas ( require(`/{nameModule}`))
+        3. CJS es el sistema tradicional de nodejs y es compatible con sistemas antiguos.
+        4. Puede usar de forma global __dirname y __filename
+
+ECMA SCRIPT MODULES JS
+    En el package.json, editar el atributo type -> "type": "module"
+    Si no se editar el atributo type a module, cada archivo debera tener .mjs para que sea tipo ESM
+    Diferencias
+        1 Usa import y export.
+        2. Carga los modulos de forma asíncrona, lo que puede mejorar el rendimiento. 
+            Al hacer build o guardar cambios en desarrollo, primero se resuelven las dependencias y si todo sale bien el servidor esta listo para escuchar solicitudes en su puerto.
+                Importaciones estaticas:
+                    - 1. El componente "ESM Loader" de nodejs crea el grafo de dependencias
+                    - 2. V8 compila el codigo de las importaciones para enviar a libuv.
+                    - 3. Libuv maneja la carga paralela con thread pool (asincrono, aprovechando más hilos y mejorando el tiempo de compilacion o guardado de cambios).
+                    - 4. V8 recibe el resultado, lo guarda en RAM y cachea.
+                Importaciones dinamicas: (const module = await import('./...'))
+                    - Cada una recibe el flujo de un codigo comun de js.
+                    - El import puede aceptar una ruta dinamica (await import(`/{nameModule}.js`))
+        3. MJS es más moderno y compatible con el estándar ECMAScript
+        4. No puede usar de forma global __dirname y __filename, necesita importar, esto con la finalidad de seguir el estandar y ser explicitos y no tener variables magicas que no siguen la nomenclatura de js.
+
+
