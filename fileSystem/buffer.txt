@@ -1,0 +1,53 @@
+Es una estructura de datos de tamaño fijo en NODEJS que representa un espacio en moria RAM fuera del scope (outside V8's heap) de la aplicacion en RAM (fuera de la memory stack y heap),
+no usa el garbage collector de JS que lo hace V8, sino LIBUV limpia el espacio de RAM usado de forma automatica con metodos nativos de bajo nivel del SO,
+La razón por la que Node.js usa Buffers es porque JavaScript originalmente no tenía una buena manera de manejar datos binarios,
+y cuando trabajas con archivos o redes, es crucial en operaciones del lado del servidor.
+Ventajas:
+    Esto permite manejar grandes cantidades de datos binarios de manera más eficiente
+    No fragmenta la memoria del heap de JavaScript
+    Es más rápido para operaciones de entrada/salida (I/O)
+    Permite trabajar con datos que no necesitan ser procesados por el motor JavaScript
+¿Por qué fuera del heap?
+    Rendimiento: El heap de V8 está optimizado para objetos JavaScript pequeños y dinámicos. Los Buffers suelen ser grandes y de tamaño fijo
+    Fragmentación: Poner grandes bloques de memoria en el heap puede causar fragmentación, lo que afecta el rendimiento del garbage collector
+    Límites de tamaño: V8 tiene un límite en el tamaño del heap (alrededor de 1.7GB en 64-bit). Poner Buffers grandes fuera permite manejar más datos
+    Operaciones de I/O: Al estar fuera del heap, es más eficiente para operaciones con el sistema operativo, ya que no necesita copiar los datos entre el heap y el espacio de I/O
+Utilidad:
+    Permiten trabajar con binarios de forma directa (aunque node los represente en consola en hexadecial (0-9 A-F))
+    Operaciones de entrada y salida de datos
+    Se usa para manipular datos binarios, al trabajar con archivos, datos de red, imagenes, base de datos, criptografia
+    
+ESTANDAR DE CODIFICACION Y REPRENSENTACIÓN DE DATOS
+    ASCII (1963) - Primera codificación estándar
+        Binario → 128 caracteres básicos
+        Solo inglés y símbolos básicos
+
+    ASCII Extendido (1981) - Expansión necesaria
+        Binario → 256 caracteres
+        Diferentes variantes por región/idioma
+        Causaba problemas de compatibilidad entre países
+
+    UNICODE (1991-hoy) - El estándar unificador
+        NO codifica, solo asigna números (code points) a caracteres
+        Por ejemplo: 'A' = U+0041
+        Soluciona el problema de tener diferentes codificaciones por región
+        Es como un "catálogo universal" de caracteres
+
+        UTF-8 (1993) - La implementación más popular de Unicode
+            Sirve para codificar y decodificar esta asignación de numeros a caracteres
+            Convierte los code points de Unicode a binario y viceversa
+            Es eficiente: usa entre 1-4 bytes según necesite
+            Compatible con ASCII (los primeros 128 caracteres)
+
+    BASE64 
+    Es otro tipo de codificación, pero tiene un propósito diferente. 
+    Convierte datos binarios en una cadena de texto usando 64 caracteres seguros (letras, números y algunos símbolos).
+    Es útil cuando:
+        Ventajas
+            Enviar datos binarios por medios que solo aceptan texto (Transferir datos binarios por URLs)
+            Incrustar imágenes/archivos en HTML/CSS/JSON
+            Evitar problemas de caracteres especiales en la transmisión
+        Desventajas
+            Aumenta el tamaño ~33% (cada 3 bytes se convierten en 4 caracteres)
+            No es eficiente para archivos grandes
+            Consume más memoria y ancho de banda
