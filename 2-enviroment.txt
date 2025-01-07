@@ -1,0 +1,90 @@
+Se recomienda tener NODE_ENV = production, porque algunas dependencias la usan para emitir logs o cosas que faciliten el desarrollo
+Buenas prácticas:
+    Desarrollo
+        - Logs detallados
+        - Hot reloading
+        - Datos de prueba
+        - Mensajes de error detallados
+    Producción
+        - Logs minimos
+        - Cache optimizado
+        - Datos reales
+        - Mensajes de error genéricos
+        
+NODE_ENV debería usarse principalmente para optimizaciones
+La lógica de negocio no debería depender de NODE_ENV
+Usar variables de entorno específicas para diferentes configuraciones
+
+Metodología de los Doce Factores:
+    - Código base
+        Un solo código fuente en control de versiones (ej: Git)
+        Mismo código para desarrollo y producción
+        Diferentes configuraciones pero misma base de código
+    - Dependencias
+        Declarar explícitamente todas las dependencias
+        Usar package.json para gestionar dependencias
+        No depender de dependencias implícitas del sistema
+    - Configuración
+        Usar variables de entorno en tiempo de ejecucion para conexiones
+    - Servicios de respaldo
+        Tratar las bases de datos (sqlserver), caches(redis), etc. como recursos externos
+        Poder cambiar servicios sin modificar código (interfaces)
+        Usar variables de entorno para configuración
+    - Construcción y ejecución
+        Separar completamente las fases de construcción y ejecución
+        No modificar código en tiempo de ejecución
+        Generar builds inmutables
+    - Procesos
+        Ejecutar la aplicación como procesos sin estado
+        No almacenar datos entre peticiones en memoria (usar redis para no tener un objeto global)
+        Usar bases de datos para persistencia
+    - Enlace de puertos
+        Exponer servicios mediante puertos
+        Una aplicación debe ser autocontenida
+    - Concurrencia
+        Escalar mediante el modelo de procesos
+        Poder ejecutar múltiples instancias
+        Diseñar para escalabilidad horizontal
+    - Desechabilidad
+        Procesos pueden iniciarse o detenerse rápidamente
+        Resistente a fallos inesperados
+        Diseñado para recuperación rápida
+    - Paridad dev/prod
+        Mantener entornos lo más similares posible
+        Usar las mismas tecnologías
+        Minimizar diferencias entre entornos
+    - Logs
+        Tratar logs como flujos de eventos
+        No gestionar archivos de log directamente
+        Usar servicios de logging centralizados (db table de logs, no files de logs)
+    - Procesos administrativos
+        Ejecutar tareas admin/gestión como procesos únicos
+        Usar el mismo código base
+        Scripts para migraciones, limpieza, etc.
+
+Aspectos a Considerar:
+    - Seguridad
+        Implementación de HTTPS
+        Protección contra ataques comunes
+        Gestión segura de secretos (encriptacion y variables de entorno)
+        Validación de entrada de datos (middlewares, esquemas zod)
+    - Rendimiento
+        Implementación de caché
+        Optimización de consultas
+        Compresión de respuestas
+        Balanceo de carga (local con pm2, regional con ngix)
+    - Monitoreo
+        Métricas de aplicación
+        Alertas y notificaciones
+        Logs centralizados
+        Monitoreo de recursos (CPU, memoria)
+    - Escalabilidad
+        Arquitectura stateless
+        Caché distribuido
+        Balanceo de carga
+        Escalado horizontal
+    - Mantenibilidad
+        Código limpio y documentado
+        Pruebas automatizadas
+        Integración continua
+        Despliegue automatizado

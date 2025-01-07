@@ -10,13 +10,60 @@ Ventajas:
 ¿Por qué fuera del heap?
     Rendimiento: El heap de V8 está optimizado para objetos JavaScript pequeños y dinámicos. Los Buffers suelen ser grandes y de tamaño fijo
     Fragmentación: Poner grandes bloques de memoria en el heap puede causar fragmentación, lo que afecta el rendimiento del garbage collector
-    Límites de tamaño: V8 tiene un límite en el tamaño del heap (alrededor de 1.7GB en 64-bit). Poner Buffers grandes fuera permite manejar más datos
+    Límites de tamaño: V8 tiene un límite en el tamaño del heap (alrededor de 1.7GB a 2GB en 64-bit, 1GB en 32 bits) (memoria stack, primitivos max de 984KB 64 bit, 492KB en 32 bits). Poner Buffers grandes fuera permite manejar más datos
     Operaciones de I/O: Al estar fuera del heap, es más eficiente para operaciones con el sistema operativo, ya que no necesita copiar los datos entre el heap y el espacio de I/O
 Utilidad:
     Permiten trabajar con binarios de forma directa (aunque node los represente en consola en hexadecial (0-9 A-F))
     Operaciones de entrada y salida de datos
     Se usa para manipular datos binarios, al trabajar con archivos, datos de red, imagenes, base de datos, criptografia
     
+FLUJO
+    Al crear un Buffer es una operacion sincrona, donde llega al event loop y libuv se encarga de decirle al SO que guarde esto de forma externa en ram y nos devueva una ref en memoria
+    Al usar, en modo lectura este binario, primero el event loop mediante libuv, lee la ref en memoria y no le pide a la memory heap sino al memoria ram externa que se creo, este binario se envia a V8 y se almacena en la memory heap
+    Aca viene el problema, en modo lectura si se desborda la memory heap, la aplicacion crasheara, por eso aunque es eficiente manejarlo de forma externa, la lectura pued desbordar, es ahi donde se piensa en streams, para leerlo de a poco
+    Se puede aumentar el tamaño de la memory heap mediante "node --max-old-space-size=4096 app.js", pero eso hare que la aplicacion pueda demorar más generando latencia en servicios ya que esta es sincrono y el garbage collector tmb demorarar más.
+        Aplicaciones pequeñas/medianas:
+            Default (~1.7GB) hasta 2GB es suficiente
+        Aplicaciones empresariales:
+            2GB a 4GB es un buen balance
+            La mayoría de aplicaciones funcionan bien en este rango
+        Límite máximo recomendado:
+            8GB es generalmente considerado el "límite práctico"
+            Más allá de 8GB, los problemas de rendimiento suelen superar los beneficios
+
+    STREAMS:
+    Un Stream en Node.js es un mecanismo para manejar datos secuenciales (lectura/escritura) en chunks (pedazos), en lugar de cargar todo en memoria de una vez.
+    Son asincronos y basados en eventos, el evento es una callback que va iterando entre el stack queu del threal pool - call stack - event loop, de ese modo va enviado resultados a V8 poco a poco o chunk a chunk
+    Chunk es un Buffer pequeño (por defecto 64KB)
+    Se puede configurar el tamaño del chunk (llamado highWaterMark en Node.js, es un atributo que se conf en cada stream)
+        Recomendaciones:
+            Para archivos de texto: 64KB - 256KB
+            Para archivos binarios: 256KB - 1MB
+            Más de 1MB solo en casos muy específicos y probados
+    Cuando trabajamos con streams, si cada chunk vamos almacenando en una variable, al final esta se desbordara porque esta en la memori stack o heap, el truco es recibir el chunk y procesarlo para que luego se limpie y ya no se haya desborde por esta variable
+    Para ver como va la memoria heap y corroborar si los chunks se estan limpiando automaticamente podemos usar - console.log('Memoria antes:', process.memoryUsage().heapUsed) - o chunk = null al final
+    FLUJO: thread pool, callback, callstack, event loop, v8
+        Thread Pool:
+            Realiza la operación I/O
+            Lee un chunk del archivo
+        Callback Queue:
+            Recibe el evento 'data' con el chunk
+            Lo encola para ser procesado
+        Call Stack:
+            Si está vacío, está listo para recibir y ejecutar
+        Event Loop:
+            Revisa si el call stack está vacío
+            Toma el evento de la callback queue
+            Lo pasa a V8
+        V8:
+            Recibe el evento
+            Lo procesa
+            Almacena en:
+                Memory Stack: Variables y referencias temporales (primitivos y ref en memoria)
+                Memory Heap: Objetos y datos que persisten (objetos)
+    Y este ciclo se repite por cada chunk hasta que el stream termina.
+
+
 ESTANDAR DE CODIFICACION Y REPRENSENTACIÓN DE DATOS
     ASCII (1963) - Primera codificación estándar
         Binario → 128 caracteres básicos
